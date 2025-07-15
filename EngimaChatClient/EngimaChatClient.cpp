@@ -36,7 +36,6 @@ int main(int argc, char* argv[])
 		std::cout << "WINSOCK FOUND!\n";
 		std::cout << "STATUS: " << wsaData.szSystemStatus << "\n";
 	}
-
 	clientSocket = INVALID_SOCKET;
 	clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (clientSocket == INVALID_SOCKET) {
@@ -49,6 +48,8 @@ int main(int argc, char* argv[])
 		std::cout << "SOCKET IS GOOD!\n";
 	}
 
+
+	// Connect socket to the server
 	sockaddr_in clientService;
 	clientService.sin_family = AF_INET;
 	InetPton(AF_INET, _T("127.0.0.1"), &clientService.sin_addr.s_addr);
@@ -64,6 +65,27 @@ int main(int argc, char* argv[])
 		std::cout << "CONNECTION SUCCESS\n";
 		std::cout << "CLIENT CAN SEND AND RECV DATA\n";
 	}
+
+	//  Read a message from the console, and send that message to the server.
+
+	char buf[200]; // User input buffer
+	while (buf != "COMMAND-EXIT") {
+		std::cout << "EnigmaChat$>";
+		std::cin.getline(buf, 200);
+
+		int byteCount = send(clientSocket, buf, 200, 0);
+		if (byteCount > 0) {
+			SetConsoleTextAttribute(hConsole, bgColor | FOREGROUND_BLUE);
+			std::cout << "EnigmaChat$> MESSAGE SENT: " << buf << "\n";
+		}
+		else {
+			WSACleanup();
+		}
+	}
+	
+
+	SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	// Close socket and perform final cleanup
 	system("pause");
 	WSACleanup();
 	return 0;
