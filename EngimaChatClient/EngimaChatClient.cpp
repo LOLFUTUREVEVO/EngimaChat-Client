@@ -5,6 +5,7 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #include <tchar.h>
+#include <thread>
 
 
 
@@ -65,13 +66,19 @@ int main(int argc, char* argv[])
 		std::cout << "CONNECTION SUCCESS\n";
 		std::cout << "CLIENT CAN SEND AND RECV DATA\n";
 	}
-
 	//  Read a message from the console, and send that message to the server.
-
+	
 	char buf[200]; // User input buffer
-	while (buf != "COMMAND-EXIT") {
+	bool quit = false;
+	while (!quit) {
 		std::cout << "EnigmaChat$>";
 		std::cin.getline(buf, 200);
+
+		if (buf[0] == '/' && buf[1] == 'q') {
+			std::cout << "QUIT SERVER\n";
+			quit = true;
+		}
+
 
 		int byteCount = send(clientSocket, buf, 200, 0);
 		if (byteCount > 0) {
