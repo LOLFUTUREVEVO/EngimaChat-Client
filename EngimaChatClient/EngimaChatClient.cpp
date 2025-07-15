@@ -81,6 +81,17 @@ int main(int argc, char* argv[])
 		else {
 			WSACleanup();
 		}
+
+		char recvBuf[400];
+		byteCount = recv(clientSocket, recvBuf, 400, 0);
+		if (byteCount > 0) {
+			SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
+			std::cout << recvBuf;
+		}
+		else {
+			WSACleanup();
+		}
+
 	}
 	
 
