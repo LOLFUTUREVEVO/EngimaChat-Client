@@ -89,6 +89,8 @@ int main(int argc, char* argv[])
 			WSACleanup();
 		}
 
+
+		// This portion retrieves from the server, when it broadcasts
 		char recvBuf[400];
 		byteCount = recv(clientSocket, recvBuf, 400, 0);
 		if (byteCount > 0) {
