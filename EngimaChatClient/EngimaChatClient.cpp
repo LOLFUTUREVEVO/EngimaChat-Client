@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 	clientService.sin_port = htons(port);
 	if (connect(clientSocket, (SOCKADDR*)&clientService, sizeof(clientService)) == SOCKET_ERROR) {
 		SetConsoleTextAttribute(hConsole, ERROR_COLOR);
-		std::cout << "CONNECTION FAILED\n";
+		std::cout << "CONNECTION FAILED\n" << WSAGetLastError() << "\n";
 		WSACleanup();
 		return 0;
 	}
