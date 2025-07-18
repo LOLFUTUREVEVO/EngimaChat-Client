@@ -11,8 +11,33 @@
 
 #define PORT 8080
 
+
+void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
+	int byteCount;
+	while (true) {
+		char recvBuf[4096];
+		byteCount = recv(clientSocket, recvBuf, 4096, 0);
+		if (byteCount > 0) {
+			SetConsoleTextAttribute(hConsole, sColor);
+			std::cout << recvBuf;
+		}
+		else {
+			WSACleanup();
+		}
+	}
+	
+}
+
+
+
 int main(int argc, char* argv[])
 {
+	std::cout << "Welcome To EnigmaChat, enter a username:";
+	char user[4096];
+	std::cin.getline(user, 4096);
+
+
+
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
 	GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
@@ -66,9 +91,15 @@ int main(int argc, char* argv[])
 		std::cout << "CONNECTION SUCCESS\n";
 		std::cout << "CLIENT CAN SEND AND RECV DATA\n";
 	}
+	// Prior to connection, add our user Data, and things like that ....
+	send(clientSocket, user, 4096, 0);
+
+
+
 	//  Read a message from the console, and send that message to the server.
-	
-	char buf[200]; // User input buffer
+	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR);
+	t1.detach();
+	char buf[4096]; // User input buffer
 	bool quit = false;
 	while (!quit) {
 		std::cout << "EnigmaChat$>";
@@ -80,7 +111,7 @@ int main(int argc, char* argv[])
 		}
 
 
-		int byteCount = send(clientSocket, buf, 200, 0);
+		int byteCount = send(clientSocket, buf, 4096, 0);
 		if (byteCount > 0) {
 			SetConsoleTextAttribute(hConsole, bgColor | FOREGROUND_BLUE);
 			std::cout << "EnigmaChat$> MESSAGE SENT: " << buf << "\n";
@@ -91,8 +122,9 @@ int main(int argc, char* argv[])
 
 
 		// This portion retrieves from the server, when it broadcasts
-		char recvBuf[400];
-		byteCount = recv(clientSocket, recvBuf, 400, 0);
+		/*
+		char recvBuf[4096];
+		byteCount = recv(clientSocket, recvBuf, 4096, 0);
 		if (byteCount > 0) {
 			SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
 			std::cout << recvBuf;
@@ -100,7 +132,7 @@ int main(int argc, char* argv[])
 		else {
 			WSACleanup();
 		}
-
+		*/
 	}
 	
 
