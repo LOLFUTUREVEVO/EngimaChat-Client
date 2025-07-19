@@ -132,6 +132,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EngimaChatClient.cpp" />
+    <ClCompile Include="User\User.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="User\User.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
