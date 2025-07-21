@@ -6,6 +6,7 @@
 #include <WS2tcpip.h>
 #include <tchar.h>
 #include <thread>
+#include "User/User.h"
 
 
 
@@ -33,9 +34,15 @@ void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 int main(int argc, char* argv[])
 {
 	std::cout << "Welcome To EnigmaChat, enter a username:";
+	User exampleUser;
+
 	char user[4096];
 	std::cin.getline(user, 4096);
+	exampleUser.setUserName(user);
 
+	char pass[4096];
+	std::cin.getline(pass, 4096);
+	exampleUser.setPassword(pass);
 
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
