@@ -36,13 +36,20 @@ int main(int argc, char* argv[])
 	std::cout << "Welcome To EnigmaChat, enter a username:";
 	User exampleUser;
 
-	char user[4096];
+	char user[4096] = {0}; // Get In the user thing... (Not all that useful but oh well)
 	std::cin.getline(user, 4096);
+	for (int i = 0; i < sizeof(user) / sizeof(user[0]); i++) {
+		if ((int)user[i] == 0) {
+			user[i] = 127; // Our Delimiter. -> no chance a user inputs this on accident.
+			i = sizeof(user) / sizeof(user[0]);
+		}		
+	}
+	std::cout << "Entered User Name: " << user << "\n";
 	exampleUser.setUserName(user);
 
-	char pass[4096];
-	std::cin.getline(pass, 4096);
-	exampleUser.setPassword(pass);
+	//char pass[4096]; // Dont need this yet. Will implement later.
+	//std::cin.getline(pass, 4096);
+	//exampleUser.setPassword(pass);
 
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -103,8 +110,7 @@ int main(int argc, char* argv[])
 
 
 
-	//  Read a message from the console, and send that message to the server.
-	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR);
+	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR); // Seperate Thread to read 
 	t1.detach();
 	char buf[4096]; // User input buffer
 	bool quit = false;

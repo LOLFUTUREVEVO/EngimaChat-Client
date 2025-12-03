@@ -19,7 +19,7 @@ void User::generateUserFile(char u[512], char p[1028]) {
 }
 
 User::User() {
-	std::cout << "Created a User\n";
+	//std::cout << "Created a User\n";
 }
 
 User User::readUserFile() {
