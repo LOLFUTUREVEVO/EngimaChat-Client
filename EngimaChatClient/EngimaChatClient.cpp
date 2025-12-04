@@ -4,23 +4,36 @@
 #include <iostream>
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#include <vector>
 #include <tchar.h>
 #include <thread>
+#include <mutex>
+#include <conio.h>
 #include "User/User.h"
 
 
 
 #define PORT 8080
 
+std::vector<std::string> allMessages;
+std::mutex mtx;
+
 
 void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
+	
 	int byteCount;
 	while (true) {
 		char recvBuf[4096];
 		byteCount = recv(clientSocket, recvBuf, 4096, 0);
 		if (byteCount > 0) {
 			SetConsoleTextAttribute(hConsole, sColor);
-			std::cout << recvBuf;
+			char* msg = (char*)malloc(100);
+			strcpy_s(msg, 100, recvBuf);
+			std::lock_guard<std::mutex> lock(mtx);
+			allMessages.push_back(msg);
+			std::cout << msg;
+			std::cout << allMessages.size() << "\n";
+			free(msg);
 		}
 		else {
 			WSACleanup();
@@ -31,8 +44,58 @@ void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 
 
 
-int main(int argc, char* argv[])
+void cls(HANDLE hConsole)
 {
+	COORD coordScreen = { 0, 0 };    // home for the cursor
+	DWORD cCharsWritten;
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	DWORD dwConSize;
+
+	// Get the number of character cells in the current buffer.
+	if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
+	{
+		return;
+	}
+
+	dwConSize = csbi.dwSize.X * csbi.dwSize.Y;
+
+	// Fill the entire screen with blanks.
+	if (!FillConsoleOutputCharacter(hConsole,        // Handle to console screen buffer
+		(TCHAR)' ',      // Character to write to the buffer
+		dwConSize,       // Number of cells to write
+		coordScreen,     // Coordinates of first cell
+		&cCharsWritten)) // Receive number of characters written
+	{
+		return;
+	}
+
+	// Get the current text attribute.
+	if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
+	{
+		return;
+	}
+
+	// Set the buffer's attributes accordingly.
+	if (!FillConsoleOutputAttribute(hConsole,         // Handle to console screen buffer
+		csbi.wAttributes, // Character attributes to use
+		dwConSize,        // Number of cells to set attribute
+		coordScreen,      // Coordinates of first cell
+		&cCharsWritten))  // Receive number of characters written
+	{
+		return;
+	}
+
+	// Put the cursor at its home coordinates.
+	SetConsoleCursorPosition(hConsole, coordScreen);
+}
+
+
+
+
+
+int main(int argc, char* argv[])
+{	
+	
 	std::cout << "Welcome To EnigmaChat, enter a username:";
 	User exampleUser;
 
@@ -53,6 +116,8 @@ int main(int argc, char* argv[])
 
 
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+
 	CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
 	GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
 	WORD attributes = consoleInfo.wAttributes;
@@ -114,7 +179,18 @@ int main(int argc, char* argv[])
 	t1.detach();
 	char buf[4096]; // User input buffer
 	bool quit = false;
+
+	COORD loc = { 0, 0 };
+	SetConsoleCursorPosition(hConsole, loc);
+	cls(hConsole);
+	
+	
+	
+
 	while (!quit) {
+		for (std::string a: allMessages) {
+			std::cout << "Message: " << a << "\n";
+		}
 		std::cout << "EnigmaChat$>";
 		std::cin.getline(buf, 200);
 
@@ -126,8 +202,7 @@ int main(int argc, char* argv[])
 
 		int byteCount = send(clientSocket, buf, 4096, 0);
 		if (byteCount > 0) {
-			SetConsoleTextAttribute(hConsole, bgColor | FOREGROUND_BLUE);
-			std::cout << "EnigmaChat$> MESSAGE SENT: " << buf << "\n";
+			
 		}
 		else {
 			WSACleanup();
