@@ -19,30 +19,6 @@ std::vector<std::string> allMessages;
 std::mutex mtx;
 
 
-void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
-	
-	int byteCount;
-	while (true) {
-		char recvBuf[4096];
-		byteCount = recv(clientSocket, recvBuf, 4096, 0);
-		if (byteCount > 0) {
-			SetConsoleTextAttribute(hConsole, sColor);
-			char* msg = (char*)malloc(100);
-			strcpy_s(msg, 100, recvBuf);
-			std::lock_guard<std::mutex> lock(mtx);
-			allMessages.push_back(msg);
-			std::cout << msg;
-			std::cout << allMessages.size() << "\n";
-			free(msg);
-		}
-		else {
-			WSACleanup();
-		}
-	}
-	
-}
-
-
 
 void cls(HANDLE hConsole)
 {
@@ -93,6 +69,44 @@ void cls(HANDLE hConsole)
 
 
 
+
+
+
+
+void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
+	
+	int byteCount;
+	while (true) {
+		char recvBuf[4096];
+		byteCount = recv(clientSocket, recvBuf, 4096, 0);
+		if (byteCount > 0) {
+			cls(hConsole);
+			SetConsoleTextAttribute(hConsole, sColor);
+			char* msg = (char*)malloc(100);
+			strcpy_s(msg, 100, recvBuf);
+			std::lock_guard<std::mutex> lock(mtx);
+			allMessages.push_back(msg);
+			for (std::string s : allMessages) {
+				std::cout << s;
+			}
+			SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
+			std::cout << "EnigmaChat$>";
+			free(msg);
+		}
+		else {
+			WSACleanup();
+		}
+	}
+	
+}
+
+
+
+
+
+
+
+
 int main(int argc, char* argv[])
 {	
 	
@@ -123,7 +137,7 @@ int main(int argc, char* argv[])
 	WORD attributes = consoleInfo.wAttributes;
 	WORD bgColor = (attributes & 0x00F0);
 	WORD ERROR_COLOR = FOREGROUND_RED | bgColor;
-	WORD SUCCESS_COLOR = FOREGROUND_GREEN | bgColor;
+	WORD SUCCESS_COLOR = FOREGROUND_GREEN | FOREGROUND_RED | bgColor;
 
 	SOCKET clientSocket;
 	int port = PORT;
@@ -179,6 +193,7 @@ int main(int argc, char* argv[])
 	t1.detach();
 	char buf[4096]; // User input buffer
 	bool quit = false;
+	bool writeToVec = true;
 
 	COORD loc = { 0, 0 };
 	SetConsoleCursorPosition(hConsole, loc);
@@ -188,21 +203,31 @@ int main(int argc, char* argv[])
 	
 
 	while (!quit) {
+		cls(hConsole);
+		SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
 		for (std::string a: allMessages) {
-			std::cout << "Message: " << a << "\n";
+			std::cout << a;
 		}
+		SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
 		std::cout << "EnigmaChat$>";
 		std::cin.getline(buf, 200);
 
 		if (buf[0] == '/' && buf[1] == 'q') {
 			std::cout << "QUIT SERVER\n";
+			
 			quit = true;
+			writeToVec = false;
 		}
 
 
 		int byteCount = send(clientSocket, buf, 4096, 0);
 		if (byteCount > 0) {
-			
+			std::string userContainer = user;
+			std::string convertedBuf = buf;
+			userContainer += ": " + convertedBuf + "\n";
+			std::lock_guard<std::mutex> lock(mtx);
+			if(writeToVec)
+				allMessages.push_back(userContainer);
 		}
 		else {
 			WSACleanup();
@@ -221,6 +246,7 @@ int main(int argc, char* argv[])
 			WSACleanup();
 		}
 		*/
+		writeToVec = true;
 	}
 	
 
