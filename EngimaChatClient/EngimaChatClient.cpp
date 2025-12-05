@@ -17,7 +17,6 @@
 
 #define PORT 8080
 
-
 char buf[4096] = { 0 }; // User input buffer
 std::vector<std::string> allMessages;
 std::mutex mtx;
@@ -99,6 +98,7 @@ static void clearBuf(char buf[]) {
 void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 	std::vector<char> in;
 	bool writeToVec = true;
+	int prev = -1;
 	int byteCount;
 	while (true) {
 		char recvBuf[4096];
@@ -115,25 +115,26 @@ void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 				std::lock_guard<std::mutex> lock(mtx);
 				allMessages.push_back(msg);
 			}
+			
 			for (std::string s : allMessages) {
 				std::wstringstream test;
 				test << "CONNECTION STATUS: " << connectionStatusMsgCol(s) << ", msg: " << s.c_str();
 				OutputDebugString(test.str().c_str());
 				switch (connectionStatusMsgCol(s)) {
-					case 0:
-						SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
-						break;
-					case 1:
-						SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
-						break;
-					case 2:
-						SetConsoleTextAttribute(hConsole, sColor);
-						break;
-					default:
-						SetConsoleTextAttribute(hConsole, sColor);
-						break;
+				case 0:
+					SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+					break;
+				case 1:
+					SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+					break;
+				case 2:
+					SetConsoleTextAttribute(hConsole, sColor);
+					break;
+				default:
+					SetConsoleTextAttribute(hConsole, sColor);
+					break;
 				}
-				
+
 				std::cout << s;
 			}
 			SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
@@ -147,6 +148,7 @@ void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 	}
 	
 }
+
 
 
 
@@ -250,18 +252,23 @@ int main(int argc, char* argv[])
 	}
 	// Prior to connection, add our user Data, and things like that ....
 	send(clientSocket, user, 4096, 0);
-
+	
 
 	std::string testingshitout = "";
-	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR); // Seperate Thread to read 
-	t1.detach();
+	
+	
 	bool quit = false;
 	bool writeToVec = true;
 
 	COORD loc = { 0, 0 };
 	SetConsoleCursorPosition(hConsole, loc);
 	cls(hConsole);
-	
+	SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED);
+	std::cout << "Loading Messages...";
+	cls(hConsole);
+
+	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR); // Seperate Thread to read 
+	t1.detach();
 	int lastMsgListSize = -1;
 	
 	short curBotLine = 0;
