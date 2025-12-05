@@ -9,12 +9,16 @@
 #include <thread>
 #include <mutex>
 #include <conio.h>
+#include <string>
+#include <sstream>
 #include "User/User.h"
 
 
 
 #define PORT 8080
 
+
+char buf[4096] = { 0 }; // User input buffer
 std::vector<std::string> allMessages;
 std::mutex mtx;
 
@@ -69,12 +73,32 @@ void cls(HANDLE hConsole)
 
 
 
+// 0 - disconnect, 1 - connect, >1 - Regular message.
+int connectionStatusMsgCol(std::string s) {
+	int loc = 0;
+	loc = s.find("disconnected");
+	if (loc != std::string::npos) {
+		return 0;
+	}
+	loc = s.find("connected");
+	if (loc != std::string::npos) {
+		return 1;
+	}
 
+	return 2;
+}
+
+static void clearBuf(char buf[]) {
+	for (int i = 0; i < sizeof(buf) / sizeof(buf[0]); i++) {
+		buf[i] = 0;
+	}
+}
 
 
 
 void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
-	
+	std::vector<char> in;
+	bool writeToVec = true;
 	int byteCount;
 	while (true) {
 		char recvBuf[4096];
@@ -84,14 +108,38 @@ void asyncRecieve(SOCKET clientSocket, HANDLE hConsole, WORD sColor) {
 			SetConsoleTextAttribute(hConsole, sColor);
 			char* msg = (char*)malloc(100);
 			strcpy_s(msg, 100, recvBuf);
-			std::lock_guard<std::mutex> lock(mtx);
-			allMessages.push_back(msg);
+			if (recvBuf[0] == '/') {
+				writeToVec = false;
+			}
+			if (writeToVec) {
+				std::lock_guard<std::mutex> lock(mtx);
+				allMessages.push_back(msg);
+			}
 			for (std::string s : allMessages) {
+				std::wstringstream test;
+				test << "CONNECTION STATUS: " << connectionStatusMsgCol(s) << ", msg: " << s.c_str();
+				OutputDebugString(test.str().c_str());
+				switch (connectionStatusMsgCol(s)) {
+					case 0:
+						SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+						break;
+					case 1:
+						SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+						break;
+					case 2:
+						SetConsoleTextAttribute(hConsole, sColor);
+						break;
+					default:
+						SetConsoleTextAttribute(hConsole, sColor);
+						break;
+				}
+				
 				std::cout << s;
 			}
 			SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
-			std::cout << "EnigmaChat$>";
+			std::cout << "EnigmaChat$>" << buf;
 			free(msg);
+			writeToVec = true;
 		}
 		else {
 			WSACleanup();
@@ -113,16 +161,32 @@ int main(int argc, char* argv[])
 	std::cout << "Welcome To EnigmaChat, enter a username:";
 	User exampleUser;
 
+
+	LPWSTR title = LPWSTR(L"EnigmaChat");
+	SetConsoleTitle(title);
+
 	char user[4096] = {0}; // Get In the user thing... (Not all that useful but oh well)
 	std::cin.getline(user, 4096);
+	
+	std::cout << "Entered User Name: " << user << "\n";
+	exampleUser.setUserName(user);
+
+	// ??? HOW THE FUCK IS THIS "MORE SECURE" THAN THE WAY IT WORKS ON UNIX?????? -> FUCK MICROSOFT
+	wchar_t* userName = new wchar_t;
+	size_t wSize = strlen(user);
+	mbstowcs_s(&wSize, userName, strlen(user) + 1, user, strlen(user) + 1);
+
+	std::wstring FUICK = userName;
+	std::wstring FUCK = L"EnigmaChat - " + FUICK;
+	
+	SetConsoleTitle(FUCK.c_str());
 	for (int i = 0; i < sizeof(user) / sizeof(user[0]); i++) {
 		if ((int)user[i] == 0) {
 			user[i] = 127; // Our Delimiter. -> no chance a user inputs this on accident.
 			i = sizeof(user) / sizeof(user[0]);
-		}		
+		}
 	}
-	std::cout << "Entered User Name: " << user << "\n";
-	exampleUser.setUserName(user);
+	
 
 	//char pass[4096]; // Dont need this yet. Will implement later.
 	//std::cin.getline(pass, 4096);
@@ -188,10 +252,9 @@ int main(int argc, char* argv[])
 	send(clientSocket, user, 4096, 0);
 
 
-
+	std::string testingshitout = "";
 	std::thread t1(asyncRecieve, clientSocket, hConsole, SUCCESS_COLOR); // Seperate Thread to read 
 	t1.detach();
-	char buf[4096]; // User input buffer
 	bool quit = false;
 	bool writeToVec = true;
 
@@ -199,28 +262,62 @@ int main(int argc, char* argv[])
 	SetConsoleCursorPosition(hConsole, loc);
 	cls(hConsole);
 	
+	int lastMsgListSize = -1;
 	
-	
-
+	short curBotLine = 0;
+	short curRightCol = 0;
 	while (!quit) {
-		cls(hConsole);
-		SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
-		for (std::string a: allMessages) {
-			std::cout << a;
+		if (lastMsgListSize != allMessages.size()) {
+			cls(hConsole);
+			lastMsgListSize = allMessages.size();
+			SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
+			for (std::string a : allMessages) {
+				switch (connectionStatusMsgCol(a)) {
+				case 0:
+					SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
+					break;
+				case 1:
+					SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
+					break;
+				case 2:
+					SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
+					break;
+				default:
+					SetConsoleTextAttribute(hConsole, SUCCESS_COLOR);
+					break;
+				}
+				std::cout << a;
+			}
+			SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
+			std::cout << "EnigmaChat$>";
 		}
-		SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
-		std::cout << "EnigmaChat$>";
+		
+		
+
 		std::cin.getline(buf, 200);
+		char testBuf[4096];
+		ZeroMemory(testBuf, 4096);
+
+
+		if (buf[0] == '/' || buf[0] == 0) {
+			writeToVec = false;
+		}
 
 		if (buf[0] == '/' && buf[1] == 'q') {
 			std::cout << "QUIT SERVER\n";
 			
 			quit = true;
-			writeToVec = false;
 		}
 
 
-		int byteCount = send(clientSocket, buf, 4096, 0);
+		
+
+
+		int byteCount = 0;
+		if (writeToVec)
+			byteCount = send(clientSocket, buf, 4096, 0);
+		else
+			byteCount = send(clientSocket, testBuf, 4096, 0);
 		if (byteCount > 0) {
 			std::string userContainer = user;
 			std::string convertedBuf = buf;
@@ -228,6 +325,7 @@ int main(int argc, char* argv[])
 			std::lock_guard<std::mutex> lock(mtx);
 			if(writeToVec)
 				allMessages.push_back(userContainer);
+			clearBuf(std::ref(buf));
 		}
 		else {
 			WSACleanup();
